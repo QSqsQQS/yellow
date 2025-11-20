@@ -1,17 +1,14 @@
---[[
-Script de painel para ativar/desativar teleporte para sua base ao pegar pet
+--[[ 
+Painel para ativar teleporte para base ao equipar QUALQUER Tool ou Accessory
 
--> Adiciona um painel na tela com botão "Teleportar para base?".
--> Quando ativado, toda vez que você pegar um pet, será teleportado para a base "SUA BASE".
--> Coloque este LocalScript em StarterPlayerScripts.
-
-DICA: Se quiser mudar a aparência, edite o Frame e o Button!
-
+- Adiciona um painel com botão para ativar/desativar.
+- Ao ativar, se você equipar qualquer Tool/Accessory, teleporta para base de "SUA BASE".
+- Coloque como LocalScript em StarterPlayerScripts!
 ]]--
 
 local player = game.Players.LocalPlayer
 
--- Função para encontrar posição da base com "SUA BASE"
+-- Função para encontrar base "SUA BASE"
 local function getBasePosition()
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("TextLabel") and obj.Text:find("SUA BASE") and obj.Parent and obj.Parent:IsA("Part") then
@@ -21,7 +18,6 @@ local function getBasePosition()
     return nil
 end
 
--- Função para teleportar para a base
 local function teleportToBase()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
@@ -29,12 +25,12 @@ local function teleportToBase()
         if pos then
             char.HumanoidRootPart.CFrame = CFrame.new(pos + Vector3.new(0,4,0))
         else
-            warn("Não achou a base com 'SUA BASE'!")
+            warn("Não achou a base 'SUA BASE'")
         end
     end
 end
 
--- Cria o painel de ativação
+-- Painel de ativação/desativação
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "TeleportPanel"
 screenGui.Parent = player:WaitForChild("PlayerGui")
@@ -59,16 +55,34 @@ button.MouseButton1Click:Connect(function()
     button.Text = ativo and "Teleportar para base? [LIGADO]" or "Teleportar para base? [DESLIGADO]"
 end)
 
--- Detecta quando pega qualquer PET
-local function detectPetPickup()
-    player.Character.ChildAdded:Connect(function(child)
-        if ativo and (child:IsA("Model") or child:IsA("Part")) then
-            if child.Name ~= player.Name and not child:IsDescendantOf(workspace) then
+-- Detecta equipar Tool ou Accessory
+local equipped = false
+local function detectEquipped()
+    local char = player.Character
+    if not char then return end
+
+    -- Tool equip detect (Hand tools)
+    for _, tool in ipairs(char:GetChildren()) do
+        if tool:IsA("Tool") then
+            if ativo and not equipped then
+                equipped = true
                 teleportToBase()
             end
+        end
+    end
+
+    char.ChildAdded:Connect(function(child)
+        if (child:IsA("Tool") or child:IsA("Accessory")) and ativo and not equipped then
+            equipped = true
+            teleportToBase()
+        end
+    end)
+    char.ChildRemoved:Connect(function(child)
+        if child:IsA("Tool") or child:IsA("Accessory") then
+            equipped = false
         end
     end)
 end
 
-player.CharacterAdded:Connect(detectPetPickup)
-if player.Character then detectPetPickup() end
+player.CharacterAdded:Connect(detectEquipped)
+if player.Character then detectEquipped() end
